@@ -1,0 +1,7 @@
+system.menu.*.third_party.contact_redirect:
+  type: mapping
+  label: 'Redirect node'
+  mapping:
+    redirectnode:
+      type: text
+      label: 'Redirect node'

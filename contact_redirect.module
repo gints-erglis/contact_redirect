@@ -1,0 +1,90 @@
+<?php
+
+/**
+ * @file
+ * Contains contact_redirect.module..
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Config\Entity;
+
+
+/**
+ * Implements hook_help().
+ */
+function contact_redirect_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.contact_redirect':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('My Awesome Module') . '</p>';
+      return $output;
+    default:
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function contact_redirect_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  if ($form_id === 'contact_form_edit_form' || $form_id === 'contact_form_add_form') {
+    contact_redirect_alter_contact_forms($form, $form_state, $form_id);
+  }
+
+  $build = $form_state->getBuildInfo();
+
+  if ( $build['base_form_id'] == 'contact_message_form') {
+    $form['actions']['submit']['#submit'][] = 'contact_redirect_do_it';
+  }
+}
+
+function contact_redirect_do_it(&$form, $form_state) {
+
+  $prefix = 'contact_message_';
+  $suffix = '_form';
+  $fid = $form['#form_id'];
+  $fid = rtrim($fid, $suffix);
+  $fid = str_replace('contact_message_', '', $fid);
+
+  $conf = Drupal\contact\Entity\ContactForm::load($fid);
+  $var = $conf->getThirdPartySetting('contact_redirect', 'redirecturl');
+  if (substr( $var, 0, 1 ) <> "/") {
+    $var = '/'.$var;
+  }
+  $var = 'internal:'.$var;
+  $form_state->setRedirectUrl( Url::fromUri($var) );
+
+}
+/**
+ * Handles the form alter for the contact-form-edit-form and contact-form-add-form forms.
+ */
+function contact_redirect_alter_contact_forms(&$form, FormStateInterface $form_state, $form_id) {
+  $contact = $form_state->getFormObject()->getEntity();
+  $form['redirecturl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Redirect url'),
+    '#description' => t('The page where redirect to after form submit.'),
+    '#default_value' => $contact->getThirdPartySetting('contact_redirect', 'redirecturl'),
+    '#weight' => 10
+  );
+
+  $form['#entity_builders'][] = 'contact_redirect_form_contact_add_form_builder';
+}
+
+/**
+ * Entity builder for the contact configuration entity.
+ */
+function contact_redirect_form_contact_add_form_builder($entity_type,  $contact, &$form, FormStateInterface $form_state) {
+  $value = $form_state->getValue('redirecturl');
+  if ($value <> '') {
+    $contact->setThirdPartySetting('contact_redirect', 'redirecturl', $form_state->getValue('redirecturl'));
+    return;
+  }
+
+  $contact->unsetThirdPartySetting('contact_redirect', 'redirecturl');
+}
+
+

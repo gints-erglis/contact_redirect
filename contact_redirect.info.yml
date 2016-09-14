@@ -1,0 +1,5 @@
+name: Contact redirect
+type: module
+description: Redirect URL for contact forms
+core: 8.x
+package: custom
